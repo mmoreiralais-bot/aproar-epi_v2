@@ -286,9 +286,9 @@ select.filter-input{padding-right:28px;appearance:none;background-image:url("dat
 
     <!-- ===== CONTROLE ===== -->
     <div id="page-controle" class="page">
-      <div class="page-header">
+      <div class="page-header" style="display:flex;align-items:center;justify-content:space-between">
         <h1>Controle de Entregas e Devoluções</h1>
-        <p>Histórico completo de movimentações de EPIs e fardamentos</p>
+        <button class="btn btn-outline btn-sm" onclick="showPage('controle')" title="Atualizar"><i class="ti ti-refresh"></i> Atualizar</button>
       </div>
       <div class="filters-row">
         <input type="text" class="filter-input" placeholder="Buscar colaborador ou item…" id="filt-ctrl-search" oninput="filtrarControle()" style="width:200px">
@@ -321,9 +321,9 @@ select.filter-input{padding-right:28px;appearance:none;background-image:url("dat
 
     <!-- ===== COLABORADORES ===== -->
     <div id="page-colaboradores" class="page">
-      <div class="page-header">
-        <h1>Colaboradores</h1>
-        <p>Cadastro e saldo de EPIs por colaborador</p>
+      <div class="page-header" style="display:flex;align-items:center;justify-content:space-between">
+        <div><h1>Colaboradores</h1><p style="color:var(--c-gray);font-size:13px;margin-top:3px">Cadastro e saldo de EPIs por colaborador</p></div>
+        <button class="btn btn-outline btn-sm" onclick="showPage('colaboradores')" title="Atualizar"><i class="ti ti-refresh"></i> Atualizar</button>
       </div>
       <div class="filters-row">
         <input type="text" class="filter-input" placeholder="Buscar nome ou matrícula…" id="filt-colab-search" oninput="filtrarColaboradores()" style="width:200px">
@@ -349,9 +349,9 @@ select.filter-input{padding-right:28px;appearance:none;background-image:url("dat
 
     <!-- ===== ESTOQUE ===== -->
     <div id="page-estoque" class="page">
-      <div class="page-header">
-        <h1>Estoque</h1>
-        <p>Controle de saldo por item e tamanho</p>
+      <div class="page-header" style="display:flex;align-items:center;justify-content:space-between">
+        <div><h1>Estoque</h1><p style="color:var(--c-gray);font-size:13px;margin-top:3px">Controle de saldo por item e tamanho</p></div>
+        <button class="btn btn-outline btn-sm" onclick="showPage('estoque')" title="Atualizar"><i class="ti ti-refresh"></i> Atualizar</button>
       </div>
       <div class="filters-row">
         <input type="text" class="filter-input" placeholder="Buscar item…" id="filt-est-search" oninput="filtrarEstoque()" style="width:200px">
@@ -359,14 +359,16 @@ select.filter-input{padding-right:28px;appearance:none;background-image:url("dat
           <option value="">Todos os status</option>
           <option>OK</option><option>Comprar</option>
         </select>
-        <button class="btn btn-primary btn-sm" onclick="openModalEntradaEstoque()"><i class="ti ti-package-import"></i>Registrar entrada</button>
+        <button class="btn btn-primary btn-sm" onclick="openModalNovoEPI()"><i class="ti ti-plus"></i>+ Novo EPI</button>
+        <button class="btn btn-outline btn-sm" onclick="openModalEntradaEstoque()"><i class="ti ti-package-import"></i>Registrar entrada</button>
+        <button class="btn btn-outline btn-sm" onclick="openModalSaidaEstoque()"><i class="ti ti-package-export"></i>Registrar saída</button>
       </div>
       <div class="card">
         <div class="tbl-wrap"><table>
           <thead><tr>
             <th>Item</th><th>Tamanho</th><th>Estoque inicial</th>
             <th>Entradas</th><th>Saídas</th><th>Saldo atual</th>
-            <th>Estoque mín.</th><th>Comprar</th><th>Status</th>
+            <th>Estoque mín.</th><th>Comprar</th><th>Status</th><th>Valor em estoque</th>
           </tr></thead>
           <tbody id="tbody-estoque"></tbody>
         </table></div>
@@ -412,9 +414,9 @@ select.filter-input{padding-right:28px;appearance:none;background-image:url("dat
 
     <!-- ===== DESCONTOS RH ===== -->
     <div id="page-descontos" class="page">
-      <div class="page-header">
-        <h1>Controle de Desconto em Folha</h1>
-        <p>Ordens de desconto para itens não devolvidos ou danificados</p>
+      <div class="page-header" style="display:flex;align-items:center;justify-content:space-between">
+        <div><h1>Controle de Desconto em Folha</h1><p style="color:var(--c-gray);font-size:13px;margin-top:3px">Ordens de desconto para itens não devolvidos ou danificados</p></div>
+        <button class="btn btn-outline btn-sm" onclick="showPage('descontos')" title="Atualizar"><i class="ti ti-refresh"></i> Atualizar</button>
       </div>
       <div id="descontos-list"></div>
     </div>
@@ -1073,7 +1075,7 @@ function aplicarFiltrosDash() {
   // ---- CUSTO ----
   const custoTotal = calcCusto(dados);
   const custoEmUso = dados.filter(r=>r.pendente>0).reduce((a,r)=>a+(r.pendente*getPreco(r.item)),0);
-  const custoDevolvido = dados.reduce((a,r)=>a+(r.devolvido*getPreco(r.item)),0);
+  const custoDevolvido = dados.filter(r=>r.condicao==='Bom para reuso').reduce((a,r)=>a+(r.devolvido*getPreco(r.item)),0);
   const custoPorPeca = total>0?(custoTotal/total):0;
 
   document.getElementById('dash-custo-metrics').innerHTML = `
@@ -1305,9 +1307,10 @@ function filtrarEstoque() {
     <td style="color:var(--c-teal2)">${e.entradas>0?'+'+e.entradas:e.entradas}</td>
     <td style="color:var(--c-red)">${e.saidas}</td>
     <td><strong ${e.saldo<=e.min&&e.min>0?'style="color:var(--c-red)"':''}>${e.saldo}</strong></td>
-    <td>${e.min}</td>
+    <td><input type="number" class="filter-input" style="width:60px;padding:3px 6px;font-size:12px" value="${e.min}" onchange="atualizarMinEstoque('${e.item}','${e.tam}',this.value)" min="0"></td>
     <td>${e.comprar>0?`<span class="badge badge-red">+${e.comprar}</span>`:e.comprar<0?`<span class="badge badge-gray">${e.comprar}</span>`:'—'}</td>
     <td>${e.status==='Comprar'?'<span class="badge badge-red"><i class="ti ti-alert-triangle"></i> Comprar</span>':'<span class="badge badge-green">OK</span>'}</td>
+    <td style="font-family:var(--mono);color:#d97706;font-weight:500">${fmtBRL(e.saldo * getPreco(e.item))}</td>
   </tr>`).join('');
 }
 
@@ -1432,7 +1435,7 @@ function renderDescontos() {
         </div>
         ${r.motivoND?`<div style="font-size:12px;color:var(--c-gray);margin-top:8px"><i class="ti ti-message" style="vertical-align:-2px"></i> ${r.motivoND}</div>`:''}
         <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn btn-outline btn-sm"><i class="ti ti-file-text"></i>Gerar ordem de desconto</button>
+          <button class="btn btn-primary btn-sm" onclick="gerarOrdemDesconto('${r.id}')"><i class="ti ti-file-text"></i>Gerar ordem de desconto</button>
           <button class="btn btn-outline btn-sm" onclick="openModalDevolucao('${r.id}')"><i class="ti ti-package-import"></i>Registrar devolução</button>
         </div>
       </div>
@@ -1884,5 +1887,192 @@ document.querySelectorAll('.modal-overlay').forEach(o=>{
 // ===== INIT — carrega dados da API =====
 carregarDados();
 </script>
+
+<!-- MODAL SAÍDA ESTOQUE -->
+<div class="modal-overlay" id="modal-saida-estoque">
+  <div class="modal">
+    <div class="modal-header">
+      <h2><i class="ti ti-package-export" style="margin-right:8px;color:var(--c-amber)"></i>Registrar Saída de Estoque</h2>
+      <button class="close-btn" onclick="closeModal('modal-saida-estoque')">&#x2715;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group"><label>Item *</label>
+          <select class="form-input" id="saida-item"><option value="">Selecione…</option></select></div>
+        <div class="form-group"><label>Tamanho *</label>
+          <select class="form-input" id="saida-tam"><option>Único</option><option>P</option><option>M</option><option>G</option><option>GG</option><option>38</option><option>39</option><option>40</option><option>41</option><option>42</option><option>43</option><option>44</option><option>45</option></select></div>
+        <div class="form-group"><label>Quantidade saída *</label>
+          <input class="form-input" type="number" id="saida-qtd" value="1" min="1"></div>
+        <div class="form-group"><label>Motivo</label>
+          <input class="form-input" type="text" id="saida-motivo" placeholder="Ex: Balanço, ajuste, perda…"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-saida-estoque')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarSaidaEstoque()"><i class="ti ti-check"></i>Registrar saída</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL NOVO EPI -->
+<div class="modal-overlay" id="modal-novo-epi">
+  <div class="modal">
+    <div class="modal-header">
+      <h2><i class="ti ti-plus" style="margin-right:8px;color:var(--c-teal)"></i>Novo EPI</h2>
+      <button class="close-btn" onclick="closeModal('modal-novo-epi')">&#x2715;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group" style="grid-column:1/-1"><label>Nome do item *</label>
+          <input class="form-input" type="text" id="nepi-nome" placeholder="Ex: Capacete cor preta"></div>
+        <div class="form-group"><label>Tamanho *</label>
+          <select class="form-input" id="nepi-tam"><option>Único</option><option>P</option><option>M</option><option>G</option><option>GG</option><option>38</option><option>39</option><option>40</option><option>41</option><option>42</option><option>43</option><option>44</option><option>45</option></select></div>
+        <div class="form-group"><label>Saldo atual</label>
+          <input class="form-input" type="number" id="nepi-saldo" value="0" min="0"></div>
+        <div class="form-group"><label>Quantidade mínima</label>
+          <input class="form-input" type="number" id="nepi-min" value="0" min="0"></div>
+        <div class="form-group"><label>Preço unitário (R$)</label>
+          <input class="form-input" type="number" id="nepi-preco" value="0" min="0" step="0.01"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-novo-epi')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarNovoEPI()"><i class="ti ti-check"></i>Cadastrar EPI</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== MODAL SAÍDA ESTOQUE =====
+function openModalSaidaEstoque() {
+  const sel = document.getElementById('saida-item');
+  const items = [...new Set(DB.estoque.map(e=>e.item))].sort();
+  sel.innerHTML = '<option value="">Selecione…</option>'+items.map(i=>`<option>${i}</option>`).join('');
+  openModal('modal-saida-estoque');
+}
+
+function salvarSaidaEstoque() {
+  const item = document.getElementById('saida-item').value;
+  const tam  = document.getElementById('saida-tam').value;
+  const qtd  = parseInt(document.getElementById('saida-qtd').value)||0;
+  if(!item){alert('Selecione um item.');return;}
+  if(qtd<=0){alert('Informe uma quantidade válida.');return;}
+  let es = DB.estoque.find(e=>e.item===item&&e.tam===tam);
+  if(!es){alert('Item/tamanho não encontrado no estoque.');return;}
+  if(qtd>es.saldo){alert('Quantidade maior que o saldo disponível ('+es.saldo+').');return;}
+  es.saidas += qtd;
+  es.saldo  -= qtd;
+  es.comprar = Math.max(0, es.min - es.saldo);
+  es.status  = es.saldo < es.min && es.min > 0 ? 'Comprar' : 'OK';
+  persistirEstoque(es);
+  closeModal('modal-saida-estoque');
+  filtrarEstoque();
+  alert('✅ Saída registrada: '+qtd+' un. de '+item+' ('+tam+')');
+}
+
+// ===== MODAL NOVO EPI =====
+function openModalNovoEPI() {
+  document.getElementById('nepi-nome').value = '';
+  document.getElementById('nepi-saldo').value = '0';
+  document.getElementById('nepi-min').value = '0';
+  document.getElementById('nepi-preco').value = '0';
+  openModal('modal-novo-epi');
+}
+
+function salvarNovoEPI() {
+  const nome  = document.getElementById('nepi-nome').value.trim();
+  const tam   = document.getElementById('nepi-tam').value;
+  const saldo = parseInt(document.getElementById('nepi-saldo').value)||0;
+  const min   = parseInt(document.getElementById('nepi-min').value)||0;
+  const preco = parseFloat(document.getElementById('nepi-preco').value)||0;
+  if(!nome){alert('Informe o nome do item.');return;}
+  const existe = DB.estoque.find(e=>e.item===nome&&e.tam===tam);
+  if(existe){alert('Esse item/tamanho já existe no estoque.');return;}
+  const novoItem = {item:nome,tam,inicial:saldo,entradas:0,saidas:0,saldo,min,comprar:Math.max(0,min-saldo),status:saldo<min&&min>0?'Comprar':'OK',obs:''};
+  DB.estoque.push(novoItem);
+  if(preco>0) { PRECOS[nome]=preco; persistirPreco(nome,preco); }
+  persistirEstoque(novoItem);
+  closeModal('modal-novo-epi');
+  renderEstoque();
+  alert('✅ EPI cadastrado: '+nome+' ('+tam+')');
+}
+
+// ===== EDITAR MÍNIMO DE ESTOQUE =====
+function atualizarMinEstoque(item, tam, valor) {
+  const min = parseInt(valor)||0;
+  const es = DB.estoque.find(e=>e.item===item&&e.tam===tam);
+  if(!es) return;
+  es.min = min;
+  es.comprar = Math.max(0, min - es.saldo);
+  es.status = es.saldo < min && min > 0 ? 'Comprar' : 'OK';
+  persistirEstoque(es);
+}
+
+// ===== GERAR ORDEM DE DESCONTO (HTML → impressão/PDF) =====
+function gerarOrdemDesconto(id) {
+  const r = DB.controle.find(x=>x.id===id);
+  if(!r) return;
+  const preco = getPreco(r.item);
+  const valor = fmtBRL(r.pendente * preco);
+  const hoje  = new Date().toLocaleDateString('pt-BR');
+
+  const conteudo = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Ordem de Desconto — ${r.colab}</title>
+<style>
+  body{font-family:Arial,sans-serif;font-size:13px;color:#000;margin:40px;line-height:1.6}
+  h1{font-size:18px;text-align:center;margin-bottom:4px}
+  .sub{text-align:center;font-size:12px;color:#555;margin-bottom:24px}
+  table{width:100%;border-collapse:collapse;margin:16px 0}
+  th,td{border:1px solid #ccc;padding:8px 12px;text-align:left}
+  th{background:#f0f0f0;font-weight:600}
+  .assinaturas{display:flex;gap:40px;margin-top:48px}
+  .assinatura{flex:1;border-top:1px solid #000;padding-top:8px;text-align:center;font-size:12px}
+  .valor{font-size:16px;font-weight:700;color:#b91c1c}
+  @media print{button{display:none}}
+</style>
+</head>
+<body>
+<button onclick="window.print()" style="float:right;padding:8px 18px;background:#0d1b2a;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px">🖨️ Imprimir / Salvar PDF</button>
+<h1>ORDEM DE DESCONTO EM FOLHA DE PAGAMENTO</h1>
+<p class="sub">Aproar Construções — Controle de Fardamentos e EPIs</p>
+<table>
+  <tr><th colspan="2">DADOS DO COLABORADOR</th></tr>
+  <tr><td><strong>Nome</strong></td><td>${r.colab}</td></tr>
+  <tr><td><strong>Matrícula</strong></td><td>${r.mat}</td></tr>
+  <tr><td><strong>Função</strong></td><td>${r.funcao}</td></tr>
+</table>
+<table>
+  <tr><th colspan="2">DADOS DO ITEM NÃO DEVOLVIDO</th></tr>
+  <tr><td><strong>Item</strong></td><td>${r.item} — Tamanho: ${r.tam}</td></tr>
+  <tr><td><strong>Quantidade pendente</strong></td><td>${r.pendente} un.</td></tr>
+  <tr><td><strong>Data de entrega</strong></td><td>${r.dataE}</td></tr>
+  <tr><td><strong>Prazo para devolução</strong></td><td>${r.prazo}</td></tr>
+  <tr><td><strong>Dias em atraso</strong></td><td>${r.diasPend} dias</td></tr>
+  <tr><td><strong>Motivo informado</strong></td><td>${r.motivoND||'Não informado'}</td></tr>
+</table>
+<table>
+  <tr><th colspan="2">VALOR A DESCONTAR</th></tr>
+  <tr><td><strong>Preço unitário</strong></td><td>${fmtBRL(preco)}</td></tr>
+  <tr><td><strong>Quantidade</strong></td><td>${r.pendente} un.</td></tr>
+  <tr><td><strong>VALOR TOTAL</strong></td><td class="valor">${valor}</td></tr>
+</table>
+<p style="font-size:12px;color:#555;margin-top:8px">
+  Gerado em: ${hoje} &nbsp;·&nbsp; Registro: ${r.id}
+</p>
+<div class="assinaturas">
+  <div class="assinatura">Responsável pela empresa<br><br><br>Nome: ___________________________</div>
+  <div class="assinatura">Assinatura do colaborador<br><br><br>Nome: ___________________________</div>
+</div>
+</body></html>`;
+
+  const win = window.open('','_blank','width=800,height=700');
+  win.document.write(conteudo);
+  win.document.close();
+}
+</script>
+
 </body>
 </html>
