@@ -960,6 +960,18 @@ PRECOS = {
   "Protetor auricular": 0.98,
 };
 
+function getPreco(item) {
+  if(PRECOS[item]) return PRECOS[item];
+  for(const k of Object.keys(PRECOS)) {
+    if(item.toLowerCase().includes(k.toLowerCase().split(' ').slice(0,3).join(' ').toLowerCase())) return PRECOS[k];
+  }
+  return 0;
+}
+
+function calcCusto(registros) {
+  return registros.reduce((acc, r) => acc + (r.qtd * getPreco(r.item)), 0);
+}
+
 let ctrlDevId = null;
 let chartItens = null, chartStatus = null, chartCusto = null;
 let dashFiltros = { dataInicio: '', dataFim: '', item: '' };
