@@ -1283,7 +1283,10 @@ function filtrarColaboradores() {
     <td>${c.devolvido}</td>
     <td><strong>${c.saldo}</strong></td>
     <td>${alertaBadge(c.alerta,c.saldo)}</td>
-    <td><button class="btn btn-outline btn-sm" onclick="verFicha('${c.nome}')"><i class="ti ti-id-badge"></i></button></td>
+    <td style="display:flex;gap:4px">
+      <button class="btn btn-outline btn-sm" onclick="verFicha('${c.nome}')"><i class="ti ti-id-badge"></i></button>
+      <button class="btn btn-outline btn-sm" onclick="excluirColaborador('${c.nome}')" title="Excluir colaborador" style="color:var(--c-red);border-color:var(--c-red)"><i class="ti ti-trash"></i></button>
+    </td>
   </tr>`).join('');
 }
 
@@ -1862,6 +1865,23 @@ function alertaBadge(alerta, saldo) {
   if(alerta==='ALTA') return '<span class="badge badge-red"><i class="ti ti-trending-up"></i> Alto</span>';
   if(saldo>0) return '<span class="badge badge-amber">Em uso</span>';
   return '<span class="badge badge-green">OK</span>';
+}
+
+// ===== EXCLUIR COLABORADOR =====
+function excluirColaborador(nome) {
+  const c = DB.colaboradores.find(x => x.nome === nome);
+  if (!c) return;
+  if (c.saldo > 0) {
+    alert('⚠️ Não é possível excluir este colaborador pois ele possui ' + c.saldo + ' peça(s) em posse. Registre a devolução antes de excluir.');
+    return;
+  }
+  if (!confirm('Tem certeza que deseja excluir o colaborador:\n' + nome + '?\n\nEsta ação não pode ser desfeita.')) return;
+  DB.colaboradores = DB.colaboradores.filter(x => x.nome !== nome);
+  if (_apiDisponivel) {
+    apiPost({ action: 'deleteColaborador', nome }).catch(e => console.warn('Erro ao excluir:', e));
+  }
+  filtrarColaboradores();
+  alert('✅ Colaborador excluído com sucesso!');
 }
 
 // Fechar modal clicando fora
