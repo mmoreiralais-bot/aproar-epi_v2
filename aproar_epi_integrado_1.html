@@ -631,7 +631,7 @@ select.filter-input{padding-right:28px;appearance:none;background-image:url("dat
 <script>
 // ===== CONFIGURAÇÃO DA API =====
 // Cole aqui a URL gerada ao publicar o Apps Script
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw-wL7TzR-K-Rksyx2C8Ipd16nTZXcG8CJhaZbRAYHXgIPNI05AiPtnIQhZDq9IPw3QwQ/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwRQHSg8QLo8bb101Qllx-GeVejRIsCTS2MvoFbpH9cVVfODGmV0pTa0d9nEiqsNKDc9A/exec";
 
 // ===== ESTADO DA APLICAÇÃO =====
 let DB = { controle: [], colaboradores: [], estoque: [] };
@@ -640,8 +640,11 @@ let _apiDisponivel = false;
 
 // ===== CAMADA DE API =====
 async function apiGet() {
-  const res = await fetch(SCRIPT_URL);
-  if (!res.ok) throw new Error("Falha na requisição GET");
+  const res = await fetch(SCRIPT_URL + "?action=getData", {
+    method: "GET",
+    redirect: "follow",
+  });
+  if (!res.ok) throw new Error("Falha na requisição GET: " + res.status);
   const json = await res.json();
   if (!json.ok) throw new Error(json.error || "Erro desconhecido");
   return json.data;
@@ -650,10 +653,11 @@ async function apiGet() {
 async function apiPost(body) {
   const res = await fetch(SCRIPT_URL, {
     method: "POST",
+    redirect: "follow",
     headers: { "Content-Type": "text/plain" },
     body: JSON.stringify(body)
   });
-  if (!res.ok) throw new Error("Falha na requisição POST");
+  if (!res.ok) throw new Error("Falha na requisição POST: " + res.status);
   const json = await res.json();
   if (!json.ok) throw new Error(json.error || "Erro desconhecido");
   return json;
@@ -723,7 +727,7 @@ async function carregarDados() {
 
   // Timeout de 10 segundos para não travar o sistema
   const timeout = new Promise((_, reject) =>
-    setTimeout(() => reject(new Error("Tempo esgotado")), 10000)
+    setTimeout(() => reject(new Error("Tempo esgotado")), 20000)
   );
 
   try {
