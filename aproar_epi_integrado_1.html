@@ -1019,10 +1019,17 @@ function aplicarFiltrosDash() {
   const dtFim = document.getElementById('dash-dt-fim').value;
   const itemFiltro = document.getElementById('dash-filtro-item').value;
 
-  // Filtra registros
+  // Filtra registros — normaliza datas para YYYY-MM-DD
+  function toYMD(v) {
+    if (!v) return '';
+    if (typeof v === 'string') return v.substring(0, 10);
+    if (v instanceof Date) return v.toISOString().substring(0, 10);
+    return String(v).substring(0, 10);
+  }
   let dados = DB.controle.filter(r => {
-    if(dtInicio && r.dataE && r.dataE < dtInicio) return false;
-    if(dtFim && r.dataE && r.dataE > dtFim) return false;
+    const dataEntrega = toYMD(r.dataE);
+    if(dtInicio && dataEntrega && dataEntrega < dtInicio) return false;
+    if(dtFim && dataEntrega && dataEntrega > dtFim) return false;
     if(itemFiltro && r.item !== itemFiltro) return false;
     return true;
   });
@@ -1084,22 +1091,22 @@ function aplicarFiltrosDash() {
 
   document.getElementById('dash-custo-metrics').innerHTML = `
     <div style="text-align:center;padding:10px 8px;background:var(--c-teal3);border-radius:var(--radius);border:1px solid rgba(0,180,160,.2)">
-      <div style="font-size:11px;color:var(--c-teal2);font-weight:600;text-transform:uppercase;letter-spacing:.5px">Custo total consumido</div>
+      <div style="font-size:11px;color:var(--c-teal2);font-weight:600;text-transform:uppercase;letter-spacing:.5px" title="Soma do valor de todas as peças entregues no período (quantidade × preço unitário). Representa o gasto total com fardamentos e EPIs.">Custo total consumido <i class='ti ti-info-circle' style='font-size:11px;opacity:.7'></i></div>
       <div style="font-size:24px;font-weight:600;color:var(--c-teal2);font-family:var(--mono);margin-top:4px">${fmtBRL(custoTotal)}</div>
       <div style="font-size:11px;color:var(--c-teal2);margin-top:2px">${total} peça(s) entregue(s)</div>
     </div>
     <div style="text-align:center;padding:10px 8px;background:var(--c-amber2);border-radius:var(--radius);border:1px solid rgba(245,158,11,.2)">
-      <div style="font-size:11px;color:#92400e;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Valor em posse</div>
+      <div style="font-size:11px;color:#92400e;font-weight:600;text-transform:uppercase;letter-spacing:.5px" title="Valor estimado das peças que estão com os colaboradores e ainda não foram devolvidas (quantidade pendente × preço unitário).">Valor em posse <i class='ti ti-info-circle' style='font-size:11px;opacity:.7'></i></div>
       <div style="font-size:24px;font-weight:600;color:#d97706;font-family:var(--mono);margin-top:4px">${fmtBRL(custoEmUso)}</div>
       <div style="font-size:11px;color:#92400e;margin-top:2px">Itens não devolvidos</div>
     </div>
     <div style="text-align:center;padding:10px 8px;background:var(--c-green2);border-radius:var(--radius);border:1px solid rgba(34,197,94,.2)">
-      <div style="font-size:11px;color:#15803d;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Valor devolvido</div>
+      <div style="font-size:11px;color:#15803d;font-weight:600;text-transform:uppercase;letter-spacing:.5px" title="Valor das peças devolvidas em condição 'Bom para reuso'. Peças danificadas, desgastadas ou descartadas não entram neste cálculo, pois não podem ser reutilizadas.">Valor devolvido <i class='ti ti-info-circle' style='font-size:11px;opacity:.7'></i></div>
       <div style="font-size:24px;font-weight:600;color:#16a34a;font-family:var(--mono);margin-top:4px">${fmtBRL(custoDevolvido)}</div>
       <div style="font-size:11px;color:#15803d;margin-top:2px">${devolvidos} peça(s)</div>
     </div>
     <div style="text-align:center;padding:10px 8px;background:var(--c-gray2);border-radius:var(--radius);border:1px solid var(--c-gray3)">
-      <div style="font-size:11px;color:var(--c-gray);font-weight:600;text-transform:uppercase;letter-spacing:.5px">Custo médio / peça</div>
+      <div style="font-size:11px;color:var(--c-gray);font-weight:600;text-transform:uppercase;letter-spacing:.5px" title="Custo total consumido dividido pelo número de peças entregues no período. Indica o valor médio gasto por peça de fardamento ou EPI.">Custo médio / peça <i class='ti ti-info-circle' style='font-size:11px;opacity:.7'></i></div>
       <div style="font-size:24px;font-weight:600;color:var(--c-navy);font-family:var(--mono);margin-top:4px">${fmtBRL(custoPorPeca)}</div>
       <div style="font-size:11px;color:var(--c-gray);margin-top:2px">No período</div>
     </div>
