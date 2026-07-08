@@ -270,7 +270,15 @@ select.filter-input{padding-right:28px;appearance:none;background-image:url("dat
 
       <div class="two-col">
         <div class="card">
-          <div class="card-header"><h3><i class="ti ti-users" style="margin-right:6px;color:var(--c-teal)"></i>Top colaboradores — saldo em uso</h3></div>
+          <div class="card-header" style="display:flex;align-items:center;justify-content:space-between">
+            <h3><i class="ti ti-users" style="margin-right:6px;color:var(--c-teal)"></i>Top colaboradores — saldo em uso</h3>
+            <select class="filter-input" id="filt-top-alerta" onchange="aplicarFiltrosDash()" style="width:150px;font-size:12px">
+              <option value="">Todos os alertas</option>
+              <option value="ok">✅ OK</option>
+              <option value="em_uso">🟡 Em uso</option>
+              <option value="alto">🔴 Alto</option>
+            </select>
+          </div>
           <div class="card-body" style="padding:0">
             <div class="tbl-wrap"><table id="tbl-top-colab"></table></div>
           </div>
@@ -333,6 +341,12 @@ select.filter-input{padding-right:28px;appearance:none;background-image:url("dat
         </select>
         <select class="filter-input" id="filt-colab-funcao" onchange="filtrarColaboradores()">
           <option value="">Todas as funções</option>
+        </select>
+        <select class="filter-input" id="filt-colab-alerta" onchange="filtrarColaboradores()" style="width:140px">
+          <option value="">Todos os alertas</option>
+          <option value="ok">✅ OK</option>
+          <option value="em_uso">🟡 Em uso</option>
+          <option value="alto">🔴 Alto</option>
         </select>
         <button class="btn btn-primary btn-sm" onclick="openModalNovoColab()"><i class="ti ti-user-plus"></i>Novo colaborador</button>
       </div>
@@ -500,23 +514,17 @@ select.filter-input{padding-right:28px;appearance:none;background-image:url("dat
 
 <!-- ===== MODAL NOVA ENTREGA ===== -->
 <div class="modal-overlay" id="modal-entrega">
-  <div class="modal">
+  <div class="modal" style="max-width:780px">
     <div class="modal-header">
       <h2><i class="ti ti-package-export" style="margin-right:8px;color:var(--c-teal)"></i>Registrar nova entrega</h2>
       <button class="close-btn" onclick="closeModal('modal-entrega')">&#x2715;</button>
     </div>
     <div class="modal-body">
-      <div class="form-grid">
-        <div class="form-group"><label>Colaborador *</label>
+      <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr">
+        <div class="form-group" style="grid-column:1/3"><label>Colaborador *</label>
           <select class="form-input" id="form-colab"><option value="">Selecione…</option></select></div>
         <div class="form-group"><label>Função</label>
           <input class="form-input" id="form-funcao-display" readonly placeholder="(auto)"></div>
-        <div class="form-group"><label>Item *</label>
-          <select class="form-input" id="form-item"><option value="">Selecione…</option></select></div>
-        <div class="form-group"><label>Tamanho</label>
-          <select class="form-input" id="form-tam"><option>Único</option><option>P</option><option>M</option><option>G</option><option>GG</option><option>38</option><option>39</option><option>40</option><option>41</option><option>42</option><option>43</option><option>44</option><option>45</option></select></div>
-        <div class="form-group"><label>Quantidade *</label>
-          <input class="form-input" type="number" id="form-qtd" value="1" min="1"></div>
         <div class="form-group"><label>Motivo entrega *</label>
           <select class="form-input" id="form-motivo">
             <option>Novo colaborador</option><option>Troca por desgaste</option>
@@ -529,6 +537,27 @@ select.filter-input{padding-right:28px;appearance:none;background-image:url("dat
           <select class="form-input" id="form-termo"><option>Não</option><option>Sim</option></select></div>
         <div class="form-group" style="grid-column:1/-1"><label>Observações</label>
           <input class="form-input" id="form-obs" placeholder="Observações opcionais…"></div>
+      </div>
+
+      <!-- Lista de itens -->
+      <div style="margin-top:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <strong style="font-size:13px">Itens da entrega</strong>
+          <button class="btn btn-outline btn-sm" onclick="adicionarLinhaEntrega()"><i class="ti ti-plus"></i> Adicionar item</button>
+        </div>
+        <div style="background:#f8fafc;border:1px solid var(--c-gray3);border-radius:8px;overflow:hidden">
+          <table style="width:100%;border-collapse:collapse;font-size:13px">
+            <thead>
+              <tr style="background:var(--c-navy);color:#fff">
+                <th style="padding:8px 10px;text-align:left;font-weight:500">Item</th>
+                <th style="padding:8px 10px;text-align:left;font-weight:500;width:100px">Tamanho</th>
+                <th style="padding:8px 10px;text-align:left;font-weight:500;width:80px">Qtd</th>
+                <th style="padding:8px 10px;width:40px"></th>
+              </tr>
+            </thead>
+            <tbody id="form-itens-lista"></tbody>
+          </table>
+        </div>
       </div>
     </div>
     <div class="modal-footer">
@@ -1202,8 +1231,19 @@ function aplicarFiltrosDash() {
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11},boxWidth:12}}}}
   });
 
-  // Top colaboradores
-  const top = [...DB.colaboradores].sort((a,b)=>b.saldo-a.saldo).slice(0,6);
+  // Top colaboradores com filtro de alerta
+  const filtTopAlerta = document.getElementById('filt-top-alerta')?.value || '';
+  let topData = [...DB.colaboradores].sort((a,b)=>b.saldo-a.saldo);
+  if (filtTopAlerta) {
+    topData = topData.filter(c => {
+      const al = String(c.alerta).toUpperCase();
+      if (filtTopAlerta==='ok')     return al==='OK' || c.saldo===0;
+      if (filtTopAlerta==='em_uso') return c.saldo>0 && al!=='ALTA';
+      if (filtTopAlerta==='alto')   return al==='ALTA';
+      return true;
+    });
+  }
+  const top = topData.slice(0, 10);
   const tc = document.getElementById('tbl-top-colab');
   tc.innerHTML = `<thead><tr><th>Colaborador</th><th>Função</th><th>Saldo em uso</th><th>Alerta</th><th>Consumo atípico</th></tr></thead><tbody>${
     top.map(c=>{
@@ -1286,10 +1326,17 @@ function filtrarColaboradores() {
   const search = document.getElementById('filt-colab-search').value.toLowerCase();
   const status = document.getElementById('filt-colab-status').value;
   const funcao = document.getElementById('filt-colab-funcao').value;
+  const alerta = document.getElementById('filt-colab-alerta').value;
   let data = [...DB.colaboradores].sort((a,b)=>a.nome.localeCompare(b.nome)).filter(c=>{
-    if(search && !c.nome.toLowerCase().includes(search) && !c.mat.includes(search)) return false;
+    if(search && !c.nome.toLowerCase().includes(search) && !String(c.mat).includes(search)) return false;
     if(status && c.status !== status) return false;
     if(funcao && c.funcao !== funcao) return false;
+    if(alerta) {
+      const al = String(c.alerta).toUpperCase();
+      if(alerta==='ok'    && !(al==='OK' || c.saldo===0)) return false;
+      if(alerta==='em_uso'&& !(c.saldo>0 && al!=='ALTA')) return false;
+      if(alerta==='alto'  && al!=='ALTA') return false;
+    }
     return true;
   });
   const tb = document.getElementById('tbody-colab');
@@ -1673,18 +1720,69 @@ function exportarMatriz() {
 }
 
 // ===== MODAIS =====
+// Lista global de itens para a entrega atual
+let _itensEntrega = [];
+let _opcoesItens = [];
+
 function openModalNovoRegistro() {
   const sel = document.getElementById('form-colab');
-  sel.innerHTML = '<option value="">Selecione…</option>'+DB.colaboradores.map(c=>`<option value="${c.nome}">${c.nome} (${c.mat})</option>`).join('');
-  const si = document.getElementById('form-item');
-  const items = [...new Set(DB.estoque.map(e=>e.item))].sort();
-  si.innerHTML = '<option value="">Selecione…</option>'+items.map(i=>`<option>${i}</option>`).join('');
+  sel.innerHTML = '<option value="">Selecione…</option>'+[...DB.colaboradores].sort((a,b)=>a.nome.localeCompare(b.nome)).map(c=>`<option value="${c.nome}">${c.nome}</option>`).join('');
+  _opcoesItens = [...new Set(DB.estoque.map(e=>e.item))].sort();
   document.getElementById('form-data-entrega').value = new Date().toISOString().split('T')[0];
   sel.onchange = ()=>{
     const c = DB.colaboradores.find(x=>x.nome===sel.value);
     document.getElementById('form-funcao-display').value = c?c.funcao:'';
   };
+  // Inicializar com uma linha de item
+  _itensEntrega = [];
+  adicionarLinhaEntrega();
   openModal('modal-entrega');
+}
+
+function adicionarLinhaEntrega() {
+  const idx = _itensEntrega.length;
+  _itensEntrega.push({ item: '', tam: 'Único', qtd: 1 });
+  renderLinhasEntrega();
+}
+
+function removerLinhaEntrega(idx) {
+  if (_itensEntrega.length <= 1) return;
+  _itensEntrega.splice(idx, 1);
+  renderLinhasEntrega();
+}
+
+function renderLinhasEntrega() {
+  const tb = document.getElementById('form-itens-lista');
+  const opcoesHtml = _opcoesItens.map(i=>`<option value="${i}">${i}</option>`).join('');
+  tb.innerHTML = _itensEntrega.map((linha, idx) => `
+    <tr style="border-top:1px solid var(--c-gray3)">
+      <td style="padding:6px 8px">
+        <select class="form-input" style="font-size:12px" onchange="_itensEntrega[${idx}].item=this.value">
+          <option value="">Selecione…</option>${opcoesHtml}
+        </select>
+      </td>
+      <td style="padding:6px 8px">
+        <select class="form-input" style="font-size:12px" onchange="_itensEntrega[${idx}].tam=this.value">
+          <option>Único</option><option>P</option><option>M</option><option>G</option><option>GG</option>
+          <option>38</option><option>39</option><option>40</option><option>41</option><option>42</option>
+          <option>43</option><option>44</option><option>45</option>
+        </select>
+      </td>
+      <td style="padding:6px 8px">
+        <input type="number" class="form-input" style="font-size:12px;width:60px" min="1" value="${linha.qtd}"
+          onchange="_itensEntrega[${idx}].qtd=parseInt(this.value)||1">
+      </td>
+      <td style="padding:6px 8px;text-align:center">
+        ${_itensEntrega.length > 1 ? `<button class="btn btn-outline btn-sm" onclick="removerLinhaEntrega(${idx})" style="color:var(--c-red);border-color:var(--c-red);padding:2px 6px"><i class="ti ti-trash"></i></button>` : ''}
+      </td>
+    </tr>
+  `).join('');
+  // Restaurar valores selecionados
+  const rows = tb.querySelectorAll('tr');
+  _itensEntrega.forEach((linha, idx) => {
+    const selItem = rows[idx]?.querySelector('select');
+    if (selItem && linha.item) selItem.value = linha.item;
+  });
 }
 
 function openModalDevolucao(id) {
@@ -1710,34 +1808,45 @@ function closeModal(id){document.getElementById(id).classList.remove('open')}
 
 function salvarEntrega() {
   const colab = document.getElementById('form-colab').value;
-  const item = document.getElementById('form-item').value;
-  const qtd = parseInt(document.getElementById('form-qtd').value)||1;
-  if(!colab||!item){alert('Preencha colaborador e item.');return;}
-  const c = DB.colaboradores.find(x=>x.nome===colab);
-  const n = DB.controle.length+1;
-  const id = 'FAR-'+String(n+100).padStart(4,'0');
+  if (!colab) { alert('Selecione o colaborador.'); return; }
+
+  // Validar itens
+  const itensValidos = _itensEntrega.filter(l => l.item && l.qtd > 0);
+  if (itensValidos.length === 0) { alert('Adicione pelo menos um item.'); return; }
+  const itensSemItem = _itensEntrega.filter(l => !l.item);
+  if (itensSemItem.length > 0) { alert('Selecione o item em todas as linhas.'); return; }
+
+  const c = DB.colaboradores.find(x => x.nome === colab);
+  const motivo = document.getElementById('form-motivo').value;
+  const dataE = document.getElementById('form-data-entrega').value;
+  const termo = document.getElementById('form-termo').value;
+  const obs = document.getElementById('form-obs').value;
   const now = new Date().toISOString().split('T')[0];
-  DB.controle.push({
-    id,dataS:now,colab,mat:c?c.mat:'N/D',funcao:c?c.funcao:'',item,
-    tam:document.getElementById('form-tam').value,qtd,
-    motivo:document.getElementById('form-motivo').value,
-    dataE:document.getElementById('form-data-entrega').value,
-    termo:document.getElementById('form-termo').value,
-    coleta:'Pendente - colaborador não levou',dataC:'',devolvido:0,pendente:qtd,
-    condicao:'',motivoND:'',prazo:'',statusFinal:'Pendente devolução',diasPend:0,obs:document.getElementById('form-obs').value
+  const idsRegistrados = [];
+
+  itensValidos.forEach(linha => {
+    const { item, tam, qtd } = linha;
+    const n = DB.controle.length + 1;
+    const id = 'FAR-' + String(n + 100).padStart(4, '0');
+    DB.controle.push({
+      id, dataS: now, colab, mat: c ? c.mat : 'N/D', funcao: c ? c.funcao : '', item,
+      tam, qtd, motivo, dataE, termo,
+      coleta: 'Pendente - colaborador não levou', dataC: '', devolvido: 0, pendente: qtd,
+      condicao: '', motivoND: '', prazo: '', statusFinal: 'Pendente devolução', diasPend: 0, obs
+    });
+    if (c) { c.entregue += qtd; c.saldo += qtd; }
+    const es = DB.estoque.find(e => e.item === item && e.tam === tam);
+    if (es) { es.saidas += qtd; es.saldo -= qtd; if (es.saldo < es.min && es.min > 0) es.status = 'Comprar'; }
+    // persistir
+    persistirRegistro(DB.controle[DB.controle.length - 1]);
+    if (es) persistirEstoque(es);
+    idsRegistrados.push(id);
   });
-  if(c){c.entregue+=qtd;c.saldo+=qtd;}
-  // atualiza estoque
-  const es = DB.estoque.find(e=>e.item===item&&e.tam===document.getElementById('form-tam').value);
-  if(es){es.saidas+=qtd;es.saldo-=qtd;if(es.saldo<es.min&&es.min>0)es.status='Comprar';}
-  // persistir no Google Sheets
-  const novoReg = DB.controle[DB.controle.length-1];
-  persistirRegistro(novoReg);
-  if(c) persistirColaborador(c);
-  if(es) persistirEstoque(es);
+
+  if (c) persistirColaborador(c);
   closeModal('modal-entrega');
   showPage('controle');
-  alert('✅ Entrega registrada: '+id);
+  alert('✅ ' + idsRegistrados.length + ' entrega(s) registrada(s):\n' + idsRegistrados.join(', '));
 }
 
 function salvarDevolucao() {
@@ -1946,6 +2055,12 @@ let ROTATIVIDADE = {
   'Óculos fumê': 4,
   'Óculos incolor': 4,
   'Protetor auricular': 4,
+  'Luva de cobertura p/ eletricista': 12,
+  'Luva isolante de alta tensão 1KV': 12,
+  'Luva tricotada pigmentada': 3,
+  'LUVA PRETA FLEXTACTIL POLIURETANO (LUVA DE OU MULTITATO)': 3,
+  'Bota de segurança para eletricista (botina)': 12,
+  'Capacete cor laranja (eletricista)': 12,
 };
 
 function renderRotatividade() {
@@ -1977,12 +2092,28 @@ function verificarConsumoAtipico(colab, item) {
   const itemNorm = item.trim().toLowerCase();
   let meses = ROTATIVIDADE[item.trim()];
   if (!meses) {
-    const key = Object.keys(ROTATIVIDADE).find(k =>
-      itemNorm.includes(k.toLowerCase()) || k.toLowerCase().includes(itemNorm)
-    );
-    meses = key ? ROTATIVIDADE[key] : null;
+    // match exato sem case
+    const keyExato = Object.keys(ROTATIVIDADE).find(k => k.toLowerCase() === itemNorm);
+    if (keyExato) {
+      meses = ROTATIVIDADE[keyExato];
+    } else {
+      // match parcial
+      const keyParcial = Object.keys(ROTATIVIDADE).find(k =>
+        itemNorm.includes(k.toLowerCase()) || k.toLowerCase().includes(itemNorm)
+      );
+      meses = keyParcial ? ROTATIVIDADE[keyParcial] : null;
+    }
   }
-  if (!meses) return { atipico: false, detalhes: [] };
+  // fallback por palavras-chave genéricas
+  if (!meses) {
+    if (itemNorm.includes('capacete')) meses = 12;
+    else if (itemNorm.includes('bota')) meses = 6;
+    else if (itemNorm.includes('luva')) meses = 3;
+    else if (itemNorm.includes('óculos') || itemNorm.includes('oculos')) meses = 4;
+    else if (itemNorm.includes('camisa')) meses = 3;
+    else if (itemNorm.includes('calça') || itemNorm.includes('calca')) meses = 3;
+    else meses = 3; // padrão: 3 meses para qualquer item não mapeado
+  }
 
   const colabNorm = colab.trim();
   // Pega todas as entregas desse colaborador + item, ordena por data
