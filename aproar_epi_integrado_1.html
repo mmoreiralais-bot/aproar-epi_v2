@@ -288,7 +288,7 @@ select.filter-input{padding-right:28px;appearance:none;background-image:url("dat
     <div id="page-controle" class="page">
       <div class="page-header" style="display:flex;align-items:center;justify-content:space-between">
         <h1>Controle de Entregas e Devoluções</h1>
-        <button class="btn btn-outline btn-sm" onclick="showPage('controle')" title="Atualizar"><i class="ti ti-refresh"></i> Atualizar</button>
+        <button class="btn btn-outline btn-sm" onclick="atualizarModulo('controle')" title="Atualizar"><i class="ti ti-refresh"></i> Atualizar</button>
       </div>
       <div class="filters-row">
         <input type="text" class="filter-input" placeholder="Buscar colaborador ou item…" id="filt-ctrl-search" oninput="filtrarControle()" style="width:200px">
@@ -323,7 +323,7 @@ select.filter-input{padding-right:28px;appearance:none;background-image:url("dat
     <div id="page-colaboradores" class="page">
       <div class="page-header" style="display:flex;align-items:center;justify-content:space-between">
         <div><h1>Colaboradores</h1><p style="color:var(--c-gray);font-size:13px;margin-top:3px">Cadastro e saldo de EPIs por colaborador</p></div>
-        <button class="btn btn-outline btn-sm" onclick="showPage('colaboradores')" title="Atualizar"><i class="ti ti-refresh"></i> Atualizar</button>
+        <button class="btn btn-outline btn-sm" onclick="atualizarModulo('colaboradores')" title="Atualizar"><i class="ti ti-refresh"></i> Atualizar</button>
       </div>
       <div class="filters-row">
         <input type="text" class="filter-input" placeholder="Buscar nome ou matrícula…" id="filt-colab-search" oninput="filtrarColaboradores()" style="width:200px">
@@ -351,7 +351,7 @@ select.filter-input{padding-right:28px;appearance:none;background-image:url("dat
     <div id="page-estoque" class="page">
       <div class="page-header" style="display:flex;align-items:center;justify-content:space-between">
         <div><h1>Estoque</h1><p style="color:var(--c-gray);font-size:13px;margin-top:3px">Controle de saldo por item e tamanho</p></div>
-        <button class="btn btn-outline btn-sm" onclick="showPage('estoque')" title="Atualizar"><i class="ti ti-refresh"></i> Atualizar</button>
+        <button class="btn btn-outline btn-sm" onclick="atualizarModulo('estoque')" title="Atualizar"><i class="ti ti-refresh"></i> Atualizar</button>
       </div>
       <div class="filters-row">
         <input type="text" class="filter-input" placeholder="Buscar item…" id="filt-est-search" oninput="filtrarEstoque()" style="width:200px">
@@ -382,9 +382,8 @@ select.filter-input{padding-right:28px;appearance:none;background-image:url("dat
         <p>Histórico completo do colaborador</p>
       </div>
       <div class="filters-row">
-        <select class="filter-input" id="ficha-select" onchange="carregarFicha()" style="width:320px">
-          <option value="">Selecione um colaborador…</option>
-        </select>
+        <input class="filter-input" id="ficha-select" list="ficha-list" placeholder="Digite ou selecione um colaborador…" oninput="carregarFicha()" style="width:320px">
+        <datalist id="ficha-list"></datalist>
       </div>
       <div id="ficha-content">
         <div class="empty-state"><i class="ti ti-id-badge"></i>Selecione um colaborador para ver a ficha</div>
@@ -416,7 +415,7 @@ select.filter-input{padding-right:28px;appearance:none;background-image:url("dat
     <div id="page-descontos" class="page">
       <div class="page-header" style="display:flex;align-items:center;justify-content:space-between">
         <div><h1>Controle de Desconto em Folha</h1><p style="color:var(--c-gray);font-size:13px;margin-top:3px">Ordens de desconto para itens não devolvidos ou danificados</p></div>
-        <button class="btn btn-outline btn-sm" onclick="showPage('descontos')" title="Atualizar"><i class="ti ti-refresh"></i> Atualizar</button>
+        <button class="btn btn-outline btn-sm" onclick="atualizarModulo('descontos')" title="Atualizar"><i class="ti ti-refresh"></i> Atualizar</button>
       </div>
       <div id="descontos-list"></div>
     </div>
@@ -451,12 +450,14 @@ select.filter-input{padding-right:28px;appearance:none;background-image:url("dat
         <div class="card">
           <div class="card-header"><h3>Parâmetros gerais</h3></div>
           <div class="card-body">
-            <div class="form-grid" style="grid-template-columns:1fr">
-              <div class="form-group"><label>Prazo padrão para coleta (dias)</label><input class="form-input" value="7"></div>
-              <div class="form-group"><label>Meta máxima pendências (%)</label><input class="form-input" value="5"></div>
-              <div class="form-group"><label>Peças por colaborador/mês (indicador)</label><input class="form-input" value="1.5"></div>
+            <div class="form-grid" style="grid-template-columns:1fr 1fr">
+              <div class="form-group"><label>Prazo padrão para coleta (dias)</label><input class="form-input" id="param-prazo" value="7" type="number" min="1"></div>
+              <div class="form-group"><label>Meta máxima pendências (%)</label><input class="form-input" id="param-meta" value="5" type="number" min="0"></div>
             </div>
-            <div style="margin-top:16px"><button class="btn btn-primary">Salvar configurações</button></div>
+
+            <div style="margin-top:16px;display:flex;gap:8px">
+              <button class="btn btn-primary" id="btn-salvar-params" onclick="salvarParams()"><i class="ti ti-check"></i>Salvar configurações</button>
+            </div>
           </div>
         </div>
         <div class="card">
@@ -486,7 +487,7 @@ select.filter-input{padding-right:28px;appearance:none;background-image:url("dat
         </div>
         <div class="tbl-wrap">
           <table id="tbl-precos">
-            <thead><tr><th>Item / EPI</th><th style="width:160px">Preço unitário (R$)</th><th style="width:80px">Ação</th></tr></thead>
+            <thead><tr><th>Item / EPI</th><th style="width:160px">Preço unitário (R$)</th><th style="width:140px" title="Intervalo mínimo entre entregas do mesmo item para o mesmo colaborador">Rotatividade (meses)</th><th style="width:80px">Ação</th></tr></thead>
             <tbody id="tbody-precos"></tbody>
           </table>
         </div>
@@ -508,8 +509,8 @@ select.filter-input{padding-right:28px;appearance:none;background-image:url("dat
       <div class="form-grid">
         <div class="form-group"><label>Colaborador *</label>
           <select class="form-input" id="form-colab"><option value="">Selecione…</option></select></div>
-        <div class="form-group"><label>Matrícula</label>
-          <input class="form-input" id="form-matricula" readonly placeholder="(auto)"></div>
+        <div class="form-group"><label>Função</label>
+          <input class="form-input" id="form-funcao-display" readonly placeholder="(auto)"></div>
         <div class="form-group"><label>Item *</label>
           <select class="form-input" id="form-item"><option value="">Selecione…</option></select></div>
         <div class="form-group"><label>Tamanho</label>
@@ -1054,6 +1055,7 @@ function aplicarFiltrosDash() {
   const pendentes = dados.filter(r=>r.pendente>0);
   const vencidos = DB.controle.filter(r=>r.statusFinal==='Pendente vencido'); // sempre global para alertas
   const alertaEstoque = DB.estoque.filter(e=>e.status==='Comprar');
+  const alertasConsumo = gerarAlertasConsumo();
   const altaRot = DB.colaboradores.filter(c=>c.alerta==='ALTA');
 
   document.getElementById('badge-pend').textContent = vencidos.length;
@@ -1065,6 +1067,10 @@ function aplicarFiltrosDash() {
   if(vencidos.length) ab.innerHTML += `<div class="alert-pill danger"><i class="ti ti-alert-circle"></i>${vencidos.length} pendência(s) vencida(s)</div>`;
   if(alertaEstoque.length) ab.innerHTML += `<div class="alert-pill warn"><i class="ti ti-package"></i>${alertaEstoque.length} item(ns) abaixo do estoque mínimo</div>`;
   if(altaRot.length) ab.innerHTML += `<div class="alert-pill info"><i class="ti ti-trending-up"></i>${altaRot.length} colaborador(es) com consumo elevado</div>`;
+  if(alertasConsumo.length) {
+    const tooltip = alertasConsumo.map(a=>nomeCurto(a.colab,25)+' — '+nomeCurto(a.item,20)).join('\n');
+    ab.innerHTML += `<div class="alert-pill danger" title="${tooltip}" style="cursor:help"><i class="ti ti-alert-triangle"></i>${alertasConsumo.length} alerta(s) de consumo atípico</div>`;
+  }
   const semTermo = DB.controle.filter(r=>r.termo==='Não'&&r.statusFinal!=='Dispensado com justificativa').length;
   if(semTermo>0) ab.innerHTML += `<div class="alert-pill warn"><i class="ti ti-signature"></i>${semTermo} entregas sem termo assinado</div>`;
   ab.innerHTML += `<div class="alert-pill success"><i class="ti ti-check"></i>${DB.colaboradores.filter(c=>c.status==='Ativo').length} colaboradores ativos</div>`;
@@ -1199,8 +1205,14 @@ function aplicarFiltrosDash() {
   // Top colaboradores
   const top = [...DB.colaboradores].sort((a,b)=>b.saldo-a.saldo).slice(0,6);
   const tc = document.getElementById('tbl-top-colab');
-  tc.innerHTML = `<thead><tr><th>Colaborador</th><th>Matrícula</th><th>Função</th><th>Saldo em uso</th><th>Alerta</th></tr></thead><tbody>${
-    top.map(c=>`<tr><td>${nomeCurto(c.nome)}</td><td><code>${c.mat}</code></td><td>${c.funcao}</td><td><strong>${c.saldo}</strong></td><td>${alertaBadge(c.alerta,c.saldo)}</td></tr>`).join('')
+  tc.innerHTML = `<thead><tr><th>Colaborador</th><th>Função</th><th>Saldo em uso</th><th>Alerta</th><th>Consumo atípico</th></tr></thead><tbody>${
+    top.map(c=>{
+      const atipicos = alertasConsumo.filter(a=>a.colab===c.nome);
+      const badgeAtipico = atipicos.length > 0
+        ? `<span class="badge badge-red" title="${atipicos.map(a=>a.item+' ('+a.detalhes.map(d=>'intervalo: '+d.diffMeses+'m < mín '+d.intervaloMinimo+'m').join(', ')+')').join('\n')}" style="cursor:help"><i class="ti ti-alert-triangle"></i> ${atipicos.length} item(ns)</span>`
+        : '<span class="badge badge-green">OK</span>';
+      return `<tr><td>${nomeCurto(c.nome)}</td><td>${c.funcao}</td><td><strong>${c.saldo}</strong></td><td>${alertaBadge(c.alerta,c.saldo)}</td><td>${badgeAtipico}</td></tr>`;
+    }).join('')
   }</tbody>`;
 
   // Estoque alertas
@@ -1257,6 +1269,7 @@ function filtrarControle() {
     <td>${statusBadge(r.statusFinal)}</td>
     <td>
       ${r.statusFinal!=='Concluído'&&r.statusFinal!=='Dispensado com justificativa'?`<button class="btn btn-outline btn-sm" onclick="openModalDevolucao('${r.id}')"><i class="ti ti-package-import"></i></button>`:''}
+      <button class="btn btn-outline btn-sm" onclick="excluirRegistroControle('${r.id}')" title="Excluir registro" style="color:var(--c-red);border-color:var(--c-red)"><i class="ti ti-trash"></i></button>
     </td>
   </tr>`).join('');
 }
@@ -1273,7 +1286,7 @@ function filtrarColaboradores() {
   const search = document.getElementById('filt-colab-search').value.toLowerCase();
   const status = document.getElementById('filt-colab-status').value;
   const funcao = document.getElementById('filt-colab-funcao').value;
-  let data = DB.colaboradores.filter(c=>{
+  let data = [...DB.colaboradores].sort((a,b)=>a.nome.localeCompare(b.nome)).filter(c=>{
     if(search && !c.nome.toLowerCase().includes(search) && !c.mat.includes(search)) return false;
     if(status && c.status !== status) return false;
     if(funcao && c.funcao !== funcao) return false;
@@ -1330,7 +1343,7 @@ function filtrarEstoque() {
 
 // ===== FICHA INDIVIDUAL =====
 function renderFichaSelect() {
-  const sel = document.getElementById('ficha-select');
+  const sel = document.getElementById('ficha-list');
   sel.innerHTML = '<option value="">Selecione um colaborador…</option>'+DB.colaboradores.map(c=>`<option value="${c.nome}">${c.nome} (${c.mat})</option>`).join('');
 }
 
@@ -1344,6 +1357,8 @@ function verFicha(nome) {
 
 function carregarFicha() {
   const nome = document.getElementById('ficha-select').value;
+  // Só carrega se o nome existir na lista de colaboradores
+  if(nome && !DB.colaboradores.find(c=>c.nome===nome)) return;
   const fc = document.getElementById('ficha-content');
   if(!nome){fc.innerHTML='<div class="empty-state"><i class="ti ti-id-badge"></i>Selecione um colaborador</div>';return;}
   const colab = DB.colaboradores.find(c=>c.nome===nome);
@@ -1667,7 +1682,7 @@ function openModalNovoRegistro() {
   document.getElementById('form-data-entrega').value = new Date().toISOString().split('T')[0];
   sel.onchange = ()=>{
     const c = DB.colaboradores.find(x=>x.nome===sel.value);
-    document.getElementById('form-matricula').value = c?c.mat:'';
+    document.getElementById('form-funcao-display').value = c?c.funcao:'';
   };
   openModal('modal-entrega');
 }
@@ -1796,15 +1811,25 @@ function renderConfig() {
 
 function renderTabelaPrecos() {
   const tb = document.getElementById('tbody-precos');
-  tb.innerHTML = Object.entries(PRECOS).map(([item, preco])=>`
+  // Unir itens de PRECOS e ROTATIVIDADE
+  const todosItens = [...new Set([...Object.keys(PRECOS), ...Object.keys(ROTATIVIDADE)])].sort();
+  tb.innerHTML = todosItens.map(item => {
+    const preco = PRECOS[item] || 0;
+    const rot = ROTATIVIDADE[item] || 3;
+    return `
     <tr>
       <td><input class="form-input" style="width:100%;font-size:13px" value="${item}" data-original="${item}" onchange="this.dataset.changed='true'"></td>
       <td><div style="display:flex;align-items:center;gap:6px">
         <span style="font-size:12px;color:var(--c-gray)">R$</span>
-        <input type="number" class="form-input" step="0.01" min="0" style="width:110px;font-family:var(--mono)" value="${preco.toFixed(2)}" id="preco-val-${item.replace(/[^a-z0-9]/gi,'_')}">
+        <input type="number" class="form-input" step="0.01" min="0" style="width:110px;font-family:var(--mono)" value="${preco.toFixed(2)}">
+      </div></td>
+      <td><div style="display:flex;align-items:center;gap:6px">
+        <input type="number" class="form-input rot-input" min="1" max="60" style="width:65px;font-family:var(--mono)" value="${rot}" data-item="${item.replace(/"/g,'&quot;')}" title="Intervalo mínimo em meses entre entregas do mesmo item para o mesmo colaborador">
+        <span style="font-size:11px;color:var(--c-gray)">meses</span>
       </div></td>
       <td><button class="btn btn-outline btn-sm" onclick="removerLinhaPreco(this)" title="Remover"><i class="ti ti-trash" style="color:var(--c-red)"></i></button></td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
 }
 
 function salvarPrecos() {
@@ -1820,15 +1845,16 @@ function salvarPrecos() {
     }
   });
   PRECOS = novosPrecos;
+  // Salvar rotatividade junto
+  document.querySelectorAll('#tbody-precos .rot-input').forEach(inp => {
+    if(inp.dataset.item) ROTATIVIDADE[inp.dataset.item] = parseInt(inp.value)||3;
+  });
   renderTabelaPrecos();
   // persistir preços no Google Sheets
   Object.entries(PRECOS).forEach(([item, preco]) => persistirPreco(item, preco));
   // Feedback visual
-  const btn = document.querySelector('#page-config .btn-primary');
-  const orig = btn.innerHTML;
-  btn.innerHTML = '<i class="ti ti-check"></i>Salvo!';
-  btn.style.background = '#16a34a';
-  setTimeout(()=>{btn.innerHTML=orig;btn.style.background='';},2000);
+  const btn = document.getElementById('btn-salvar-precos');
+  if(btn){const orig=btn.innerHTML;btn.innerHTML='<i class="ti ti-check"></i>Salvo!';btn.style.background='#16a34a';setTimeout(()=>{btn.innerHTML=orig;btn.style.background='';},2000);}
 }
 
 function adicionarLinhaPreco() {
@@ -1839,6 +1865,10 @@ function adicionarLinhaPreco() {
     <td><div style="display:flex;align-items:center;gap:6px">
       <span style="font-size:12px;color:var(--c-gray)">R$</span>
       <input type="number" class="form-input" step="0.01" min="0" style="width:110px;font-family:var(--mono)" value="0.00">
+    </div></td>
+    <td><div style="display:flex;align-items:center;gap:6px">
+      <input type="number" class="form-input rot-input" min="1" max="60" style="width:65px;font-family:var(--mono)" value="3">
+      <span style="font-size:11px;color:var(--c-gray)">meses</span>
     </div></td>
     <td><button class="btn btn-outline btn-sm" onclick="removerLinhaPreco(this)"><i class="ti ti-trash" style="color:var(--c-red)"></i></button></td>`;
   tb.appendChild(tr);
@@ -1872,6 +1902,133 @@ function alertaBadge(alerta, saldo) {
   if(alerta==='ALTA') return '<span class="badge badge-red"><i class="ti ti-trending-up"></i> Alto</span>';
   if(saldo>0) return '<span class="badge badge-amber">Em uso</span>';
   return '<span class="badge badge-green">OK</span>';
+}
+
+
+// ===== ATUALIZAR MÓDULO (busca dados frescos da API) =====
+function atualizarModulo(modulo) {
+  window.location.reload();
+}
+
+// ===== EXCLUIR REGISTRO DE CONTROLE =====
+function excluirRegistroControle(id) {
+  const r = DB.controle.find(x => x.id === id);
+  if (!r) return;
+  const aviso = r.pendente > 0 ? '\n\n⚠️ Este registro possui ' + r.pendente + ' peça(s) pendente(s) de devolução.' : '';
+  if (!confirm('Tem certeza que deseja excluir o registro ' + id + '?' + aviso + '\n\nColaborador: ' + r.colab + '\nItem: ' + r.item + '\n\nEsta ação não pode ser desfeita.')) return;
+  DB.controle = DB.controle.filter(x => x.id !== id);
+  if (_apiDisponivel) {
+    apiPost({ action: 'deleteControle', id }).catch(e => console.warn('Erro ao excluir:', e));
+  }
+  filtrarControle();
+  alert('✅ Registro excluído com sucesso!');
+}
+
+// ===== ÍNDICE DE ROTATIVIDADE =====
+let ROTATIVIDADE = {
+  'Bota de segurança (botina)': 3,
+  'Bota de segurança marrom (encarregado)': 12,
+  'Bota de pvc (galocha cano médio)': 6,
+  'Camisa cinza manga longa': 3,
+  'Camisa manga longa azul com botão M Aproar': 12,
+  'Camisa manga longa azul com botão F Aproar': 12,
+  'Camisa manga longa azul com botão M Prático': 12,
+  'Camisa manga longa azul com botão F Prático': 12,
+  'Camisa manga longa azul marinho': 12,
+  'Calça cinza': 3,
+  'Capacete cor branca': 12,
+  'Capacete cor amarela': 12,
+  'Capacete cor azul': 12,
+  'Capacete cor vermelha': 12,
+  'Capacete cor verde': 12,
+  'Capacete cor marrom': 12,
+  'Capacete cor laranja (eletricista)': 12,
+  'Óculos fumê': 4,
+  'Óculos incolor': 4,
+  'Protetor auricular': 4,
+};
+
+function renderRotatividade() {
+  const div = document.getElementById('tbl-rotatividade');
+  if (!div) return;
+  // Pega todos os itens únicos do controle + rotatividade padrão
+  const itens = [...new Set([...Object.keys(ROTATIVIDADE), ...DB.controle.map(r=>r.item)])].filter(Boolean).sort();
+  div.innerHTML = itens.map(item => `
+    <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${item}">${item}</span>
+    <div style="display:flex;align-items:center;gap:6px">
+      <input type="number" min="1" max="60" value="${ROTATIVIDADE[item]||3}" 
+        data-item="${item.replace(/"/g,'&quot;')}"
+        style="width:60px;padding:4px 8px;border:1px solid var(--c-gray3);border-radius:6px;font-size:12px"
+        onchange="ROTATIVIDADE[this.dataset.item]=parseInt(this.value)||3">
+      <span style="font-size:11px;color:var(--c-gray)">meses</span>
+    </div>
+  `).join('');
+}
+
+function toYMDLocal(v) {
+  if (!v) return '';
+  if (typeof v === 'string') return v.substring(0, 10);
+  if (v instanceof Date) return v.toISOString().substring(0, 10);
+  return String(v).substring(0, 10);
+}
+
+function verificarConsumoAtipico(colab, item) {
+  // Busca o intervalo de rotatividade — usa chave exata ou procura substring
+  let meses = ROTATIVIDADE[item];
+  if (!meses) {
+    // Tenta match parcial (ex: qualquer capacete)
+    const key = Object.keys(ROTATIVIDADE).find(k =>
+      item.toLowerCase().includes(k.toLowerCase()) ||
+      k.toLowerCase().includes(item.toLowerCase())
+    );
+    meses = key ? ROTATIVIDADE[key] : null;
+  }
+  if (!meses) return { atipico: false, detalhes: [] };
+
+  // Pega todas as entregas desse colaborador + item, ordena por data
+  const entregas = DB.controle
+    .filter(r => r.colab === colab && r.item === item && r.dataE)
+    .map(r => ({ ...r, dataENorm: toYMDLocal(r.dataE) }))
+    .sort((a, b) => a.dataENorm.localeCompare(b.dataENorm));
+
+  if (entregas.length <= 1) return { atipico: false, detalhes: [] };
+
+  // Verifica se algum par de entregas consecutivas está dentro do intervalo
+  const detalhes = [];
+  for (let i = 1; i < entregas.length; i++) {
+    const anterior = new Date(entregas[i-1].dataENorm);
+    const atual    = new Date(entregas[i].dataENorm);
+    // Diferença em meses
+    const diffMeses = (atual.getFullYear() - anterior.getFullYear()) * 12 +
+                      (atual.getMonth() - anterior.getMonth()) +
+                      (atual.getDate() >= anterior.getDate() ? 0 : -1);
+    if (diffMeses < meses) {
+      detalhes.push({
+        dataAnterior: entregas[i-1].dataENorm,
+        dataAtual: entregas[i].dataENorm,
+        diffMeses,
+        intervaloMinimo: meses
+      });
+    }
+  }
+  return { atipico: detalhes.length > 0, detalhes };
+}
+
+function gerarAlertasConsumo() {
+  const alertas = [];
+  const grupos = {};
+  DB.controle.forEach(r => {
+    const chave = r.colab + '||' + r.item;
+    if (!grupos[chave]) grupos[chave] = { colab: r.colab, item: r.item, registros: [] };
+    grupos[chave].registros.push(r);
+  });
+  Object.values(grupos).forEach(g => {
+    const resultado = verificarConsumoAtipico(g.colab, g.item);
+    if (resultado.atipico) {
+      alertas.push({ colab: g.colab, item: g.item, qtd: g.registros.length, detalhes: resultado.detalhes });
+    }
+  });
+  return alertas;
 }
 
 // ===== EXCLUIR COLABORADOR =====
