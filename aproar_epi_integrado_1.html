@@ -535,6 +535,8 @@ select.filter-input{padding-right:28px;appearance:none;background-image:url("dat
           <input class="form-input" type="date" id="form-data-entrega"></div>
         <div class="form-group"><label>Termo assinado?</label>
           <select class="form-input" id="form-termo"><option>Não</option><option>Sim</option></select></div>
+        <div class="form-group"><label>Código da obra</label>
+          <input class="form-input" id="form-obra" placeholder="Ex: 123456" maxlength="6" pattern="[0-9]{1,6}" oninput="this.value=this.value.replace(/[^0-9]/g,'').substring(0,6)" inputmode="numeric"></div>
         <div class="form-group" style="grid-column:1/-1"><label>Observações</label>
           <input class="form-input" id="form-obs" placeholder="Observações opcionais…"></div>
       </div>
@@ -560,7 +562,11 @@ select.filter-input{padding-right:28px;appearance:none;background-image:url("dat
         </div>
       </div>
     </div>
-    <div class="modal-footer">
+    <div class="modal-footer" style="flex-wrap:wrap;gap:10px">
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--c-gray);cursor:pointer;margin-right:auto">
+        <input type="checkbox" id="form-dispensado" style="width:16px;height:16px;accent-color:var(--c-teal)">
+        Dispensado com justificativa <span style="font-size:11px;color:var(--c-gray)">(caso extraoficial — não exige devolução)</span>
+      </label>
       <button class="btn btn-outline" onclick="closeModal('modal-entrega')">Cancelar</button>
       <button class="btn btn-primary" onclick="salvarEntrega()"><i class="ti ti-check"></i>Registrar entrega</button>
     </div>
@@ -812,6 +818,7 @@ function normalizarControle(r) {
     statusFinal: String(r.statusFinal || ""),
     diasPend:    Number(r.diasPend) || 0,
     obs:         String(r.obs || ""),
+    obra:        (() => { const m = String(r.obs||'').match(/^\[Obra:(\d+)\]/); return m ? m[1] : ''; })(),
   };
 }
 
@@ -1009,7 +1016,7 @@ function calcCusto(registros) {
 }
 
 let ctrlDevId = null;
-let chartItens = null, chartStatus = null, chartCusto = null;
+let chartItens = null, chartStatus = null, chartCusto = null, chartObra = null;
 let dashFiltros = { dataInicio: '', dataFim: '', item: '' };
 
 // ===== NAVEGAÇÃO =====
@@ -1224,6 +1231,46 @@ function aplicarFiltrosDash() {
   const statusCount = {};
   dados.forEach(r=>{statusCount[r.statusFinal]=(statusCount[r.statusFinal]||0)+1});
   const sColors={'Concluído':'#22c55e','Pendente vencido':'#ef4444','Dispensado com justificativa':'#3b82f6','Pendente devolução':'#f59e0b'};
+  // Gráfico consumo por obra
+  if(chartObra){chartObra.destroy();chartObra=null;}
+  const obraMap = {};
+  dados.forEach(r => {
+    const m = r.obs && String(r.obs).match(/^\[Obra:(\d+)\]/);
+    const obraKey = m ? 'Obra ' + m[1] : null;
+    if (obraKey) obraMap[obraKey] = (obraMap[obraKey] || 0) + r.qtd;
+  });
+  const obraLabels = Object.keys(obraMap).sort((a,b) => obraMap[b] - obraMap[a]);
+  const obraCores = obraLabels.map((_, i) => `hsl(${(i * 47) % 360}, 65%, 55%)`);
+  if (obraLabels.length > 0) {
+    chartObra = new Chart(document.getElementById('chartObra'), {
+      type: 'bar',
+      data: {
+        labels: obraLabels,
+        datasets: [{
+          label: 'Peças entregues',
+          data: obraLabels.map(k => obraMap[k]),
+          backgroundColor: obraCores,
+          borderRadius: 6,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: true, ticks: { stepSize: 1 } },
+          x: { ticks: { font: { size: 11 } } }
+        }
+      }
+    });
+  } else {
+    const ctx = document.getElementById('chartObra').getContext('2d');
+    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    ctx.font = '13px IBM Plex Sans, sans-serif';
+    ctx.fillStyle = '#94a3b8';
+    ctx.textAlign = 'center';
+    ctx.fillText('Nenhum registro com código de obra no período selecionado', ctx.canvas.width/2, 100);
+  }
+
   if(chartStatus){chartStatus.destroy();chartStatus=null;}
   chartStatus = new Chart(document.getElementById('chartStatus'),{
     type:'doughnut',
@@ -1736,6 +1783,11 @@ function openModalNovoRegistro() {
   // Inicializar com uma linha de item
   _itensEntrega = [];
   adicionarLinhaEntrega();
+  // Resetar campos
+  const dispEl = document.getElementById('form-dispensado');
+  if (dispEl) dispEl.checked = false;
+  const obraEl = document.getElementById('form-obra');
+  if (obraEl) obraEl.value = '';
   openModal('modal-entrega');
 }
 
@@ -1820,7 +1872,10 @@ function salvarEntrega() {
   const motivo = document.getElementById('form-motivo').value;
   const dataE = document.getElementById('form-data-entrega').value;
   const termo = document.getElementById('form-termo').value;
-  const obs = document.getElementById('form-obs').value;
+  const obsRaw = document.getElementById('form-obs').value;
+  const obra = document.getElementById('form-obra').value.replace(/[^0-9]/g,'').substring(0,6);
+  const obs = obra ? '[Obra:' + obra + '] ' + obsRaw : obsRaw;
+  const dispensado = document.getElementById('form-dispensado').checked;
   const now = new Date().toISOString().split('T')[0];
   const idsRegistrados = [];
 
@@ -1828,11 +1883,39 @@ function salvarEntrega() {
     const { item, tam, qtd } = linha;
     const n = DB.controle.length + 1;
     const id = 'FAR-' + String(n + 100).padStart(4, '0');
+
+    // Definir statusFinal com base nas regras:
+    // 1. Dispensado com justificativa → sempre "Dispensado com justificativa"
+    // 2. Novo colaborador (1ª entrega do item) → "Concluído"
+    // 3. Demais casos → "Pendente devolução"
+    let statusFinal = 'Pendente devolução';
+    let pendente = qtd;
+    let devolvido = 0;
+    let dataC = '';
+
+    if (dispensado) {
+      statusFinal = 'Dispensado com justificativa';
+      pendente = 0;
+      dataC = '-';
+    } else if (motivo === 'Novo colaborador') {
+      // Verifica se é realmente a 1ª entrega desse item para esse colaborador
+      const jaRecebeu = DB.controle.some(r =>
+        r.colab === colab && r.item === item && r.id !== id
+      );
+      if (!jaRecebeu) {
+        statusFinal = 'Concluído';
+        pendente = 0;
+        devolvido = 0;
+        // Não exige devolução na 1ª entrega de novo colaborador
+      }
+    }
+
     DB.controle.push({
       id, dataS: now, colab, mat: c ? c.mat : 'N/D', funcao: c ? c.funcao : '', item,
       tam, qtd, motivo, dataE, termo,
-      coleta: 'Pendente - colaborador não levou', dataC: '', devolvido: 0, pendente: qtd,
-      condicao: '', motivoND: '', prazo: '', statusFinal: 'Pendente devolução', diasPend: 0, obs
+      coleta: dispensado ? 'Dispensado com justificativa' : 'Pendente - colaborador não levou',
+      dataC, devolvido, pendente,
+      condicao: '', motivoND: '', prazo: '', statusFinal, diasPend: 0, obs
     });
     if (c) { c.entregue += qtd; c.saldo += qtd; }
     const es = DB.estoque.find(e => e.item === item && e.tam === tam);
