@@ -1241,8 +1241,9 @@ function aplicarFiltrosDash() {
   });
   const obraLabels = Object.keys(obraMap).sort((a,b) => obraMap[b] - obraMap[a]);
   const obraCores = obraLabels.map((_, i) => `hsl(${(i * 47) % 360}, 65%, 55%)`);
-  if (obraLabels.length > 0) {
-    chartObra = new Chart(document.getElementById('chartObra'), {
+  const canvasObraEl = document.getElementById('chartObra');
+  if (obraLabels.length > 0 && canvasObraEl) {
+    chartObra = new Chart(canvasObraEl, {
       type: 'bar',
       data: {
         labels: obraLabels,
@@ -1263,12 +1264,15 @@ function aplicarFiltrosDash() {
       }
     });
   } else {
-    const ctx = document.getElementById('chartObra').getContext('2d');
-    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-    ctx.font = '13px IBM Plex Sans, sans-serif';
-    ctx.fillStyle = '#94a3b8';
-    ctx.textAlign = 'center';
-    ctx.fillText('Nenhum registro com código de obra no período selecionado', ctx.canvas.width/2, 100);
+    const canvasObra = document.getElementById('chartObra');
+    if (canvasObra) {
+      const ctx = canvasObra.getContext('2d');
+      ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      ctx.font = '13px IBM Plex Sans, sans-serif';
+      ctx.fillStyle = '#94a3b8';
+      ctx.textAlign = 'center';
+      ctx.fillText('Nenhum registro com código de obra no período selecionado', ctx.canvas.width/2, 100);
+    }
   }
 
   if(chartStatus){chartStatus.destroy();chartStatus=null;}
